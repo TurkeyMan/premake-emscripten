@@ -2,7 +2,7 @@
 
 Supported features:
 
-* VisualStudio support through vs-tool [vs-tool](https://github.com/juj/vs-tool)
+* VisualStudio support through [vs-tool](https://github.com/juj/vs-tool)
 
 Todo:
 
