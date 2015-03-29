@@ -1,10 +1,10 @@
 --
--- vstudio.lua
+-- emscripten_vstudio.lua
 -- Emscripten integration for vstudio.
--- Copyright (c) 2012 Manu Evans and the Premake project
+-- Copyright (c) 2012-2015 Manu Evans and the Premake project
 --
 
-	local emscripten = premake.extensions.emscripten
+	local emscripten = premake.modules.emscripten
 	local sln2005 = premake.vstudio.sln2005
 	local vc2010 = premake.vstudio.vc2010
 	local vstudio = premake.vstudio
@@ -38,9 +38,9 @@
 			if cfg.kind then
 				local types = {
 					StaticLib = "StaticLibrary",
-					ConsoleApp = "Application",
+					ConsoleApp = "JSApplication",
 					WindowedApp = "Application",
-					HTMLPage = "HTMLPage"
+					HTMLPage = "Application"
 				}
 				if not types[cfg.kind] then
 					error("Invalid 'kind' for Emscripten: " .. cfg.kind, 2)
@@ -58,26 +58,30 @@
 -- Extend outputProperties.
 --
 
-	table.insert(vc2010.elements.outputProperties, "emscriptenClangPath")
-	table.insert(vc2010.elements.outputProperties, "emscriptenEmccPath")
-
-	function vc2010.emscriptenClangPath(cfg)
+	premake.override(vc2010.elements, "outputProperties", function(oldfn, cfg)
+		local elements = oldfn(cfg)
 		if cfg.system == premake.EMSCRIPTEN then
-			if cfg.clangpath ~= nil then
---				local dirs = project.getrelative(cfg.project, includedirs)
---				dirs = path.translate(table.concat(fatalwarnings, ";"))
-				_p(2,'<ClangPath>%s</ClangPath>', cfg.clangpath)
-			end
+			elements = table.join(elements, {
+				emscripten.clangPath,
+				emscripten.emccPath
+			})
+		end
+		return elements
+	end)
+
+	function emscripten.clangPath(cfg)
+		if cfg.clangpath ~= nil then
+--			local dirs = project.getrelative(cfg.project, includedirs)
+--			dirs = path.translate(table.concat(fatalwarnings, ";"))
+			_p(2,'<ClangPath>%s</ClangPath>', cfg.clangpath)
 		end
 	end
 
-	function vc2010.emscriptenEmccPath(cfg)
-		if cfg.system == premake.EMSCRIPTEN then
-			if cfg.emccpath ~= nil then
---				local dirs = project.getrelative(cfg.project, includedirs)
---				dirs = path.translate(table.concat(fatalwarnings, ";"))
-				_p(2,'<EmccPath>%s</EmccPath>', cfg.emccpath)
-			end
+	function emscripten.emccPath(cfg)
+		if cfg.emccpath ~= nil then
+--			local dirs = project.getrelative(cfg.project, includedirs)
+--			dirs = path.translate(table.concat(fatalwarnings, ";"))
+			_p(2,'<EmccPath>%s</EmccPath>', cfg.emccpath)
 		end
 	end
 
@@ -97,71 +101,85 @@
 -- Extend clCompile.
 --
 
-	table.insert(vc2010.elements.clCompile, "emscriptenDebugInformation")
-	table.insert(vc2010.elements.clCompile, "emscriptenEnableWarnings")
-	table.insert(vc2010.elements.clCompile, "emscriptenDisableWarnings")
-	table.insert(vc2010.elements.clCompile, "emscriptenSpecificWarningsAsErrors")
-	table.insert(vc2010.elements.clCompile, "emscriptenPreprocessorUndefinitions")
-	table.insert(vc2010.elements.clCompile, "emscriptenLanguageStandard")
-
-	function vc2010.emscriptenDebugInformation(cfg)
+	premake.override(vc2010.elements, "clCompile", function(oldfn, cfg)
+		local elements = oldfn(cfg)
 		if cfg.system == premake.EMSCRIPTEN then
-			if cfg.flags.Symbols then
-				_p(3,'<GenerateDebugInformation>true</GenerateDebugInformation>')
-			end
+			elements = table.join(elements, {
+				emscripten.debugInformation,
+				emscripten.enableWarnings,
+				emscripten.languageStandard,
+			})
+		end
+		return elements
+	end)
+
+	function emscripten.debugInformation(cfg)
+		if cfg.flags.Symbols then
+			_p(3,'<GenerateDebugInformation>true</GenerateDebugInformation>')
 		end
 	end
 
-	function vc2010.emscriptenEnableWarnings(cfg)
-		if cfg.system == premake.EMSCRIPTEN then
-			if #cfg.enablewarnings > 0 then
-				_x(3,'<EnableWarnings>%s</EnableWarnings>', table.concat(cfg.enablewarnings, ";"))
-			end
+	function emscripten.enableWarnings(cfg)
+		if #cfg.enablewarnings > 0 then
+			_x(3,'<EnableWarnings>%s</EnableWarnings>', table.concat(cfg.enablewarnings, ";"))
 		end
 	end
 
-	function vc2010.emscriptenDisableWarnings(cfg)
+	function emscripten.languageStandard(cfg)
+		local map = {
+			c90         = "LanguageStandardC89",
+			gnu90       = "LanguageStandardGnu89",
+			c94         = "LanguageStandardC94",
+			c99         = "LanguageStandardC99",
+			gnu99       = "LanguageStandardGnu99",
+			["c++98"]   = "LanguageStandardCxx03",
+			["gnu++98"] = "LanguageStandardGnu++98",
+			["c++11"]   = "LanguageStandardC++11",
+			["gnu++11"] = "LanguageStandardGnu++11"
+		}
+		if cfg.languagestandard and map[cfg.languagestandard] then
+			_p(3,'<LanguageStandardMode>%s</LanguageStandardMode>', map[cfg.languagestandard])
+		end
+	end
+
+	premake.override(vc2010, "disableSpecificWarnings", function(oldfn, cfg)
 		if cfg.system == premake.EMSCRIPTEN then
 			if #cfg.disablewarnings > 0 then
-				_x(3,'<DisableWarnings>%s</DisableWarnings>', table.concat(cfg.disablewarnings, ";"))
+				local warnings = table.concat(cfg.disablewarnings, ";")
+				warnings = premake.esc(warnings) .. ";%%(DisableWarnings)"
+				vc2010.element('DisableWarnings', condition, warnings)
 			end
+		else
+			oldfn(cfg)
 		end
-	end
+	end)
 
-	function vc2010.emscriptenSpecificWarningsAsErrors(cfg)
+	premake.override(vc2010, "treatSpecificWarningsAsErrors", function(oldfn, cfg)
 		if cfg.system == premake.EMSCRIPTEN then
 			if #cfg.fatalwarnings > 0 then
-				_x(3,'<SpecificWarningsAsErrors>%s</SpecificWarningsAsErrors>', table.concat(cfg.fatalwarnings, ";"))
+				local fatal = table.concat(cfg.fatalwarnings, ";")
+				fatal = premake.esc(fatal) .. ";%%(SpecificWarningsAsErrors)"
+				vc2010.element('SpecificWarningsAsErrors', condition, fatal)
 			end
+		else
+			oldfn(cfg)
 		end
-	end
+	end)
 
-	function vc2010.emscriptenPreprocessorUndefinitions(cfg)
+	premake.override(vc2010, "undefinePreprocessorDefinitions", function(oldfn, cfg, undefines, escapeQuotes, condition)
 		if cfg.system == premake.EMSCRIPTEN then
-			if #cfg.undefines > 0 then
-				_x(3,'<PreprocessorUndefinitions>%s</PreprocessorUndefinitions>', table.concat(cfg.undefines, ";"))
+			if #undefines > 0 then
+				undefines = table.concat(undefines, ";")
+				if escapeQuotes then
+					undefines = undefines:gsub('"', '\\"')
+				end
+				undefines = premake.esc(undefines) .. ";%%(PreprocessorUndefinitions)"
+				vc2010.element('PreprocessorUndefinitions', condition, undefines)
 			end
+		else
+			oldfn(cfg, undefines, escapeQuotes, condition)
 		end
-	end
-
-	function vc2010.emscriptenLanguageStandard(cfg)
-		if cfg.system == premake.EMSCRIPTEN then
-			local map = {
-				c90         = "LanguageStandardC89",
-				gnu90       = "LanguageStandardGnu89",
-				c94         = "LanguageStandardC94",
-				c99         = "LanguageStandardC99",
-				gnu99       = "LanguageStandardGnu99",
-				["c++98"]   = "LanguageStandardCxx03",
-				["gnu++98"] = "LanguageStandardGnu++98",
-				["c++11"]   = "LanguageStandardC++11",
-				["gnu++11"] = "LanguageStandardGnu++11"
-			}
-			if cfg.languagestandard and map[cfg.languagestandard] then
-				_p(3,'<LanguageStandardMode>%s</LanguageStandardMode>', map[cfg.languagestandard])
-			end
-		end
-	end
+	end)
 
 	premake.override(vc2010, "warningLevel", function(oldfn, cfg)
 		if cfg.system == premake.EMSCRIPTEN then
@@ -176,7 +194,7 @@
 
 	premake.override(vc2010, "treatWarningAsError", function(oldfn, cfg)
 		if cfg.system == premake.EMSCRIPTEN then
-			if cfg.flags.FatalWarnings and cfg.warnings ~= "Off" then
+			if cfg.flags.FatalCompileWarnings and cfg.warnings ~= premake.OFF then
 				_p(3,'<WarningsAsErrors>true</WarningsAsErrors>')
 			end
 		else
@@ -185,7 +203,6 @@
 	end)
 
 	premake.override(vc2010, "optimization", function(oldfn, cfg, condition)
-		local config = cfg.config or cfg
 		if config.system == premake.EMSCRIPTEN then
 			local map = { Off="O0", On="O2", Debug="O0", Full="O3", Size="Os", Speed="O3" }
 			local value = map[cfg.optimize]
@@ -194,7 +211,7 @@
 				if cfg.flags.LinkTimeOptimization and value ~= "O0" then
 					value = "O4"
 				end
-				vc2010.element(3, 'OptimizationLevel', condition, value)
+				vc2010.element('OptimizationLevel', condition, value)
 			end
 		else
 			oldfn(cfg, condition)
@@ -209,9 +226,8 @@
 	end)
 
 	premake.override(vc2010, "additionalCompileOptions", function(oldfn, cfg, condition)
-		local config = cfg.config or cfg
 		if config.system == premake.EMSCRIPTEN then
-			emscripten.additionalOptions(cfg)
+			emscripten.additionalOptions(cfg, condition)
 		end
 		return oldfn(cfg, condition)
 	end)
@@ -252,7 +268,7 @@
 --
 -- Add options unsupported by Emscripten vs-tool UI to <AdvancedOptions>.
 --
-	function emscripten.additionalOptions(cfg)
+	function emscripten.additionalOptions(cfg, condition)
 
 		local function alreadyHas(t, key)
 			for _, k in ipairs(t) do
@@ -264,5 +280,10 @@
 		end
 
 --		Eg: table.insert(cfg.buildoptions, "-option")
+
+--		if #cfg.buildoptions > 0 then
+--			local opts = table.concat(cfg.buildoptions, " ")
+--			vc2010.element("AdditionalOptions", condition, '%s %%(AdditionalOptions)', opts)
+--		end
 
 	end
