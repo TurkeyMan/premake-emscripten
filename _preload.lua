@@ -19,6 +19,8 @@
 	api.addAllowed("flags", {
 		"NoClosureCompiler",
 		"NoMinifyJavaScript",
+		"NoMemoryInitFile",
+		"NoExitRuntime",
 		"IgnoreDynamicLinking",
 	})
 
@@ -82,8 +84,27 @@
 		}
 	}
 
---      <PreJsFile>prejs;prejs2;%(PreJsFile)</PreJsFile>
---      <PostJsFile>postjs;postjs2;%(PostJsFile)</PostJsFile>
+	api.register {
+		name = "jsprepend",
+		scope = "config",
+		kind = "list:path",
+		tokens = true,
+	}
+
+	api.register {
+		name = "jsappend",
+		scope = "config",
+		kind = "list:path",
+		tokens = true,
+	}
+
+	api.register {
+		name = "exportedfunctions",
+		scope = "config",
+		kind = "list:string",
+		tokens = true,
+	}
+
 --      <EmbedFile>embedRes;embed2;%(EmbedFile)</EmbedFile>
 --      <PreloadFile>preloadRes;preload2;%(PreloadFile)</PreloadFile>
 --      <HtmlShellFile>htmlShell;html2;%(HtmlShellFile)</HtmlShellFile>

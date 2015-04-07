@@ -4,12 +4,14 @@
 -- Copyright (c) 2012-2015 Manu Evans and the Premake project
 --
 
-	local emscripten = premake.modules.emscripten
-	local sln2005 = premake.vstudio.sln2005
-	local vc2010 = premake.vstudio.vc2010
-	local vstudio = premake.vstudio
-	local project = premake.project
-	local config = premake.config
+	local p = premake
+	local emscripten = p.modules.emscripten
+
+	local sln2005 = p.vstudio.sln2005
+	local vc2010 = p.vstudio.vc2010
+	local vstudio = p.vstudio
+	local project = p.project
+	local config = p.config
 
 
 --
@@ -20,12 +22,21 @@
 		vstudio.vs2010_architectures.emscripten = "Emscripten"
 	end
 
+	local function alreadyHas(t, key)
+		for _, k in ipairs(t) do
+			if string.find(k, key) then
+				return true
+			end
+		end
+		return false
+	end
+
 --
 -- Extend configurationProperties.
 --
 
 	premake.override(vc2010, "platformToolset", function(orig, cfg)
-		if cfg.system == premake.EMSCRIPTEN then
+		if cfg.system == p.EMSCRIPTEN then
 			-- is there a reason to write this? default is fine.
 --			_p(2,'<PlatformToolset>emcc</PlatformToolset>')
 		else
@@ -34,7 +45,7 @@
 	end)
 
 	premake.override(vc2010, "configurationType", function(oldfn, cfg)
-		if cfg.system == premake.EMSCRIPTEN then
+		if cfg.system == p.EMSCRIPTEN then
 			if cfg.kind then
 				local types = {
 					StaticLib = "StaticLibrary",
@@ -60,7 +71,7 @@
 
 	premake.override(vc2010.elements, "outputProperties", function(oldfn, cfg)
 		local elements = oldfn(cfg)
-		if cfg.system == premake.EMSCRIPTEN then
+		if cfg.system == p.EMSCRIPTEN then
 			elements = table.join(elements, {
 				emscripten.clangPath,
 				emscripten.emccPath
@@ -86,7 +97,7 @@
 	end
 
 	premake.override(vc2010, "targetExt", function(oldfn, cfg)
-		if cfg.system == premake.EMSCRIPTEN then
+		if cfg.system == p.EMSCRIPTEN then
 			local ext = cfg.buildtarget.extension
 			if ext ~= "" then
 				_x(2,'<TargetExt>%s</TargetExt>', ext)
@@ -103,7 +114,7 @@
 
 	premake.override(vc2010.elements, "clCompile", function(oldfn, cfg)
 		local elements = oldfn(cfg)
-		if cfg.system == premake.EMSCRIPTEN then
+		if cfg.system == p.EMSCRIPTEN then
 			elements = table.join(elements, {
 				emscripten.debugInformation,
 				emscripten.enableWarnings,
@@ -114,8 +125,12 @@
 	end)
 
 	function emscripten.debugInformation(cfg)
+		-- TODO: support these
+		--     NoDebugInfo
+		--     LimitedDebugInfo
+		--     FullDebugInfo
 		if cfg.flags.Symbols then
-			_p(3,'<GenerateDebugInformation>true</GenerateDebugInformation>')
+			_p(3,'<GenerateDebugInformation>FullDebugInfo</GenerateDebugInformation>')
 		end
 	end
 
@@ -143,7 +158,7 @@
 	end
 
 	premake.override(vc2010, "disableSpecificWarnings", function(oldfn, cfg)
-		if cfg.system == premake.EMSCRIPTEN then
+		if cfg.system == p.EMSCRIPTEN then
 			if #cfg.disablewarnings > 0 then
 				local warnings = table.concat(cfg.disablewarnings, ";")
 				warnings = premake.esc(warnings) .. ";%%(DisableWarnings)"
@@ -155,7 +170,7 @@
 	end)
 
 	premake.override(vc2010, "treatSpecificWarningsAsErrors", function(oldfn, cfg)
-		if cfg.system == premake.EMSCRIPTEN then
+		if cfg.system == p.EMSCRIPTEN then
 			if #cfg.fatalwarnings > 0 then
 				local fatal = table.concat(cfg.fatalwarnings, ";")
 				fatal = premake.esc(fatal) .. ";%%(SpecificWarningsAsErrors)"
@@ -167,7 +182,7 @@
 	end)
 
 	premake.override(vc2010, "undefinePreprocessorDefinitions", function(oldfn, cfg, undefines, escapeQuotes, condition)
-		if cfg.system == premake.EMSCRIPTEN then
+		if cfg.system == p.EMSCRIPTEN then
 			if #undefines > 0 then
 				undefines = table.concat(undefines, ";")
 				if escapeQuotes then
@@ -182,7 +197,7 @@
 	end)
 
 	premake.override(vc2010, "warningLevel", function(oldfn, cfg)
-		if cfg.system == premake.EMSCRIPTEN then
+		if cfg.system == p.EMSCRIPTEN then
 			local map = { Off = "DisableAllWarnings", Extra = "AllWarnings" }
 			if map[cfg.warnings] ~= nil then
 				_p(3,'<Warnings>%s</Warnings>', map[cfg.warnings])
@@ -193,7 +208,7 @@
 	end)
 
 	premake.override(vc2010, "treatWarningAsError", function(oldfn, cfg)
-		if cfg.system == premake.EMSCRIPTEN then
+		if cfg.system == p.EMSCRIPTEN then
 			if cfg.flags.FatalCompileWarnings and cfg.warnings ~= premake.OFF then
 				_p(3,'<WarningsAsErrors>true</WarningsAsErrors>')
 			end
@@ -203,7 +218,7 @@
 	end)
 
 	premake.override(vc2010, "optimization", function(oldfn, cfg, condition)
-		if config.system == premake.EMSCRIPTEN then
+		if cfg.system == p.EMSCRIPTEN then
 			local map = { Off="O0", On="O2", Debug="O0", Full="O3", Size="Os", Speed="O3" }
 			local value = map[cfg.optimize]
 			if value or not condition then
@@ -220,16 +235,76 @@
 
 	premake.override(vc2010, "exceptionHandling", function(oldfn, cfg)
 		-- ignored for Emscripten
-		if cfg.system ~= premake.EMSCRIPTEN then
+		if cfg.system ~= p.EMSCRIPTEN then
 			oldfn(cfg)
 		end
 	end)
 
 	premake.override(vc2010, "additionalCompileOptions", function(oldfn, cfg, condition)
-		if config.system == premake.EMSCRIPTEN then
-			emscripten.additionalOptions(cfg, condition)
+		if cfg.system == p.EMSCRIPTEN then
+			emscripten.additionalCompileOptions(cfg, condition)
 		end
 		return oldfn(cfg, condition)
+	end)
+
+	function emscripten.additionalCompileOptions(cfg, condition)
+
+		if cfg.flags["C++11"] then
+			table.insert(cfg.buildoptions, "-std=c++11")
+		end
+
+	end
+
+	-- these should be silenced for Emscripten
+	premake.override(vc2010, "precompiledHeader", function(oldfn, cfg, filecfg, condition)
+		if cfg.system ~= p.EMSCRIPTEN then
+			oldfn(cfg, filecfg, condition)
+		end
+	end)
+	premake.override(vc2010, "debugInformationFormat", function(oldfn, cfg)
+		if cfg.system ~= p.EMSCRIPTEN then
+			oldfn(cfg)
+		end
+	end)
+	premake.override(vc2010, "functionLevelLinking", function(oldfn, cfg)
+		if cfg.system ~= p.EMSCRIPTEN then
+			oldfn(cfg)
+		end
+	end)
+	premake.override(vc2010, "intrinsicFunctions", function(oldfn, cfg)
+		if cfg.system ~= p.EMSCRIPTEN then
+			oldfn(cfg)
+		end
+	end)
+	premake.override(vc2010, "minimalRebuild", function(oldfn, cfg)
+		if cfg.system ~= p.EMSCRIPTEN then
+			oldfn(cfg)
+		end
+	end)
+	premake.override(vc2010, "omitFramePointers", function(oldfn, cfg)
+		if cfg.system ~= p.EMSCRIPTEN then
+			oldfn(cfg)
+		end
+	end)
+	premake.override(vc2010, "stringPooling", function(oldfn, cfg)
+		if cfg.system ~= p.EMSCRIPTEN then
+			oldfn(cfg)
+		end
+	end)
+	premake.override(vc2010, "runtimeLibrary", function(oldfn, cfg)
+		if cfg.system ~= p.EMSCRIPTEN then
+			oldfn(cfg)
+		end
+	end)
+	premake.override(vc2010, "bufferSecurityCheck", function(oldfn, cfg)
+		if cfg.system ~= p.EMSCRIPTEN then
+			oldfn(cfg)
+		end
+	end)
+	premake.override(vc2010, "floatingPointModel", function(oldfn, cfg)
+		if cfg.system ~= p.EMSCRIPTEN then
+			oldfn(cfg)
+		end
 	end)
 
 
@@ -237,29 +312,123 @@
 -- Extend Link.
 --
 
-	-- TODO: link needs to be extendable...
+	premake.override(vc2010.elements, "link", function(oldfn, cfg, explicit)
+		local elements = oldfn(cfg, explicit)
+		if cfg.kind ~= p.STATICLIB and cfg.system == p.EMSCRIPTEN then
+			elements = table.join(elements, {
+				emscripten.linkerOptimizationLevel,
+				emscripten.typedArrays,
+				emscripten.closureCompiler,
+				emscripten.minify,
+				emscripten.ignoreDynamicLinking,
+				emscripten.preJsFile,
+				emscripten.postJsFile,
+				emscripten.embedFile,
+				emscripten.preloadFile,
+				emscripten.htmlShellFile,
+				emscripten.jsLibrary,
+			})
+		end
+		return elements
+	end)
 
---      <SubSystem>Console</SubSystem>
---      <EntryPointSymbol>mainCRTStartup</EntryPointSymbol>
---      <OutputFile>$(OutDir)$(TargetName)$(TargetExt)</OutputFile>
---      <AdditionalLibraryDirectories>libDir;lib2</AdditionalLibraryDirectories>
---      <LinkerOptimizationLevel>O2</LinkerOptimizationLevel>
---      <TypedArrays>SharedTypedArrays</TypedArrays>
---      <RunClosureCompiler>true</RunClosureCompiler>
---      <RunMinify>true</RunMinify>
---      <IgnoreDynamicLinking>true</IgnoreDynamicLinking>
---      <PreJsFile>prejs;prejs2;%(PreJsFile)</PreJsFile>
---      <PostJsFile>postjs;postjs2;%(PostJsFile)</PostJsFile>
---      <EmbedFile>embedRes;embed2;%(EmbedFile)</EmbedFile>
---      <PreloadFile>preloadRes;preload2;%(PreloadFile)</PreloadFile>
---      <HtmlShellFile>htmlShell;html2;%(HtmlShellFile)</HtmlShellFile>
---      <JsLibrary>jsLib;jsLib2;%(JsLibrary)</JsLibrary>
---      <AdditionalDependencies>additionalDep;dep2;%(AdditionalDependencies)</AdditionalDependencies>
---      <AdditionalOptions>link commands %(AdditionalOptions)</AdditionalOptions>
+	function emscripten.linkerOptimizationLevel(cfg)
+		local map = {
+			["Off"] = "O0",
+			["Simple"] = "O1",
+			["On"] = "O2",
+			["Unsafe"] = "O3",
+		}
+		if cfg.linkeroptimize and map[cfg.linkeroptimize] then
+			_p(3, '<LinkerOptimizationLevel>%s</LinkerOptimizationLevel>', map[cfg.linkeroptimize])
+		end
+	end
 
+	function emscripten.typedArrays(cfg)
+		local map = {
+			["None"] = "NoTypedArrays",
+			["Parallel"] = "ParallelTypedArrays",
+			["Shared"] = "SharedTypedArrays",
+		}
+		if cfg.typedarrays and map[cfg.typedarrays] then
+			_p(3, '<TypedArrays>%s</TypedArrays>', map[cfg.typedarrays])
+		end
+	end
+
+	function emscripten.closureCompiler(cfg)
+		if cfg.flags.NoClosureCompiler then
+			_p(3, '<RunClosureCompiler>false</RunClosureCompiler>')
+		end
+	end
+
+	function emscripten.minify(cfg)
+		if cfg.flags.NoMinifyJavaScript then
+			_p(3, '<RunMinify>false</RunMinify>')
+		end
+	end
+
+	function emscripten.ignoreDynamicLinking(cfg)
+		if cfg.flags.IgnoreDynamicLinking then
+			_p(3, '<IgnoreDynamicLinking>true</IgnoreDynamicLinking>')
+		end
+	end
+
+	function emscripten.preJsFile(cfg)
+		if #cfg.jsprepend > 0 then
+			local files = project.getrelative(cfg.project, cfg.jsprepend)
+			_x(3, '<PreJsFile>%s;%%(PreJsFile)</PreJsFile>', table.concat(files, ";"))
+		end
+	end
+
+	function emscripten.postJsFile(cfg)
+		if #cfg.jsappend > 0 then
+			local files = project.getrelative(cfg.project, cfg.jsappend)
+			_x(3, '<PostJsFile>%s;%%(PostJsFile)</PostJsFile>', table.concat(files, ";"))
+		end
+	end
+
+	function emscripten.embedFile(cfg)
+--		_x(3, '<EmbedFile>embedRes;embed2;%(EmbedFile)</EmbedFile>', )
+	end
+
+	function emscripten.preloadFile(cfg)
+--		_x(3, '<PreloadFile>preloadRes;preload2;%(PreloadFile)</PreloadFile>', )
+	end
+
+	function emscripten.htmlShellFile(cfg)
+--		_x(3, '<HtmlShellFile>htmlShell;html2;%(HtmlShellFile)</HtmlShellFile>', )
+	end
+
+	function emscripten.jsLibrary(cfg)
+--		_x(3, '<JsLibrary>jsLib;jsLib2;%(JsLibrary)</JsLibrary>', )
+	end
+
+	premake.override(vc2010, "additionalLinkOptions", function(oldfn, cfg)
+		if cfg.system == p.EMSCRIPTEN then
+			emscripten.additionalLinkOptions(cfg) -- TODO: should this be moved to bake or something?
+		end
+		return oldfn(cfg)
+	end)
+
+	-- these should be silenced for Emscripten
 	premake.override(vc2010, "generateDebugInformation", function(oldfn, cfg)
 		-- Note: Emscripten specifies the debug info in the clCompile section
-		if cfg.system ~= premake.EMSCRIPTEN then
+		if cfg.system ~= p.EMSCRIPTEN then
+			oldfn(cfg)
+		end
+	end)
+	premake.override(vc2010, "subSystem", function(oldfn, cfg)
+		if cfg.system ~= p.EMSCRIPTEN then
+			oldfn(cfg)
+		end
+	end)
+	premake.override(vc2010, "optimizeReferences", function(oldfn, cfg)
+		if cfg.system ~= p.EMSCRIPTEN then
+			oldfn(cfg)
+		end
+	end)
+	premake.override(vc2010, "entryPointSymbol", function(oldfn, cfg)
+		if cfg.system ~= p.EMSCRIPTEN then
 			oldfn(cfg)
 		end
 	end)
@@ -268,22 +437,17 @@
 --
 -- Add options unsupported by Emscripten vs-tool UI to <AdvancedOptions>.
 --
-	function emscripten.additionalOptions(cfg, condition)
+	function emscripten.additionalLinkOptions(cfg)
 
-		local function alreadyHas(t, key)
-			for _, k in ipairs(t) do
-				if string.find(k, key) then
-					return true
-				end
-			end
-			return false
+		if #cfg.exportedfunctions > 0 then
+			local functions = table.implode(cfg.exportedfunctions, "'", "'", ", ")
+			table.insert(cfg.linkoptions, "-s EXPORTED_FUNCTIONS=\"[" .. functions .. "]\"")
 		end
-
---		Eg: table.insert(cfg.buildoptions, "-option")
-
---		if #cfg.buildoptions > 0 then
---			local opts = table.concat(cfg.buildoptions, " ")
---			vc2010.element("AdditionalOptions", condition, '%s %%(AdditionalOptions)', opts)
---		end
+		if cfg.flags.NoExitRuntime then
+			table.insert(cfg.linkoptions, "-s NO_EXIT_RUNTIME=1")
+		end
+		if cfg.flags.NoMemoryInitFile then
+			table.insert(cfg.linkoptions, "--memory-init-file 0")
+		end
 
 	end
