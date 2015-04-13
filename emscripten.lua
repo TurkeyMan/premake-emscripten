@@ -11,6 +11,7 @@
 
 	configuration { "Emscripten" }
 		system "emscripten"
+		toolset "clang"
 
 
 	include("emscripten_emcc.lua")

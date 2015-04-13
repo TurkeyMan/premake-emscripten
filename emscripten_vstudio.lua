@@ -96,17 +96,6 @@
 		end
 	end
 
-	premake.override(vc2010, "targetExt", function(oldfn, cfg)
-		if cfg.system == p.EMSCRIPTEN then
-			local ext = cfg.buildtarget.extension
-			if ext ~= "" then
-				_x(2,'<TargetExt>%s</TargetExt>', ext)
-			end
-		else
-			oldfn(cfg)
-		end
-	end)
-
 
 --
 -- Extend clCompile.
@@ -196,43 +185,6 @@
 		end
 	end)
 
-	premake.override(vc2010, "warningLevel", function(oldfn, cfg)
-		if cfg.system == p.EMSCRIPTEN then
-			local map = { Off = "DisableAllWarnings", Extra = "AllWarnings" }
-			if map[cfg.warnings] ~= nil then
-				_p(3,'<Warnings>%s</Warnings>', map[cfg.warnings])
-			end
-		else
-			oldfn(cfg)
-		end
-	end)
-
-	premake.override(vc2010, "treatWarningAsError", function(oldfn, cfg)
-		if cfg.system == p.EMSCRIPTEN then
-			if cfg.flags.FatalCompileWarnings and cfg.warnings ~= premake.OFF then
-				_p(3,'<WarningsAsErrors>true</WarningsAsErrors>')
-			end
-		else
-			oldfn(cfg)
-		end
-	end)
-
-	premake.override(vc2010, "optimization", function(oldfn, cfg, condition)
-		if cfg.system == p.EMSCRIPTEN then
-			local map = { Off="O0", On="O2", Debug="O0", Full="O3", Size="Os", Speed="O3" }
-			local value = map[cfg.optimize]
-			if value or not condition then
-				value = value or "O0"
-				if cfg.flags.LinkTimeOptimization and value ~= "O0" then
-					value = "O4"
-				end
-				vc2010.element('OptimizationLevel', condition, value)
-			end
-		else
-			oldfn(cfg, condition)
-		end
-	end)
-
 	premake.override(vc2010, "exceptionHandling", function(oldfn, cfg)
 		-- ignored for Emscripten
 		if cfg.system ~= p.EMSCRIPTEN then
@@ -259,46 +211,6 @@
 	premake.override(vc2010, "precompiledHeader", function(oldfn, cfg, filecfg, condition)
 		if cfg.system ~= p.EMSCRIPTEN then
 			oldfn(cfg, filecfg, condition)
-		end
-	end)
-	premake.override(vc2010, "debugInformationFormat", function(oldfn, cfg)
-		if cfg.system ~= p.EMSCRIPTEN then
-			oldfn(cfg)
-		end
-	end)
-	premake.override(vc2010, "functionLevelLinking", function(oldfn, cfg)
-		if cfg.system ~= p.EMSCRIPTEN then
-			oldfn(cfg)
-		end
-	end)
-	premake.override(vc2010, "intrinsicFunctions", function(oldfn, cfg)
-		if cfg.system ~= p.EMSCRIPTEN then
-			oldfn(cfg)
-		end
-	end)
-	premake.override(vc2010, "minimalRebuild", function(oldfn, cfg)
-		if cfg.system ~= p.EMSCRIPTEN then
-			oldfn(cfg)
-		end
-	end)
-	premake.override(vc2010, "omitFramePointers", function(oldfn, cfg)
-		if cfg.system ~= p.EMSCRIPTEN then
-			oldfn(cfg)
-		end
-	end)
-	premake.override(vc2010, "stringPooling", function(oldfn, cfg)
-		if cfg.system ~= p.EMSCRIPTEN then
-			oldfn(cfg)
-		end
-	end)
-	premake.override(vc2010, "runtimeLibrary", function(oldfn, cfg)
-		if cfg.system ~= p.EMSCRIPTEN then
-			oldfn(cfg)
-		end
-	end)
-	premake.override(vc2010, "bufferSecurityCheck", function(oldfn, cfg)
-		if cfg.system ~= p.EMSCRIPTEN then
-			oldfn(cfg)
 		end
 	end)
 	premake.override(vc2010, "floatingPointModel", function(oldfn, cfg)
