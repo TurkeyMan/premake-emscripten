@@ -13,6 +13,7 @@
 --
 
 	p.EMSCRIPTEN = "emscripten"
+	p.EMCC = "emcc"
 
 	api.addAllowed("system", { p.EMSCRIPTEN })
 	api.addAllowed("kind", "HTMLPage")

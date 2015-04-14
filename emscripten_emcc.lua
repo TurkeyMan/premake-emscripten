@@ -5,7 +5,10 @@
 --
 
 	local emscripten = premake.modules.emscripten
+
 	emscripten.emcc = {}
+
+	premake.tools.emcc = emscripten.emcc
 
 	local emcc = emscripten.emcc
 	local clang = premake.tools.clang
