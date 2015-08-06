@@ -8,6 +8,8 @@
 	local p = premake
 	local api = p.api
 
+	premake.tools.emcc = {}
+
 --
 -- Register the Emscripten extension
 --
@@ -85,3 +87,18 @@
 --      <PreloadFile>preloadRes;preload2;%(PreloadFile)</PreloadFile>
 --      <HtmlShellFile>htmlShell;html2;%(HtmlShellFile)</HtmlShellFile>
 --      <JsLibrary>jsLib;jsLib2;%(JsLibrary)</JsLibrary>
+
+
+
+	configuration { "Emscripten" }
+		system "emscripten"
+		toolset "emcc"
+
+
+--
+-- Decide when the full module should be loaded.
+--
+
+	return function(cfg)
+		return cfg.system == "emscripten" or cfg.toolset == "emcc"
+	end
