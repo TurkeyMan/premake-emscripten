@@ -90,10 +90,11 @@
 
 
 
-	configuration { "Emscripten" }
+	filter { "configurations:Emscripten" }
 		system "emscripten"
 		toolset "emcc"
 
+	filter {}
 
 --
 -- Decide when the full module should be loaded.
