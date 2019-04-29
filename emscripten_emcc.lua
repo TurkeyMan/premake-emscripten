@@ -142,6 +142,7 @@
 
 	end
 
+	emcc.getrunpathdirs = clang.getrunpathdirs
 
 --
 -- Build a list of linker flags corresponding to the settings in
@@ -277,5 +278,10 @@
 	}
 
 	function emcc.gettoolname(cfg, tool)
+		if _ACTION == "gmake" or _ACTION == "gmake2" then
+			if cfg.emccpath ~= nil then
+				return path.join(cfg.emccpath, emcc.tools[tool])
+			end
+		end
 		return emcc.tools[tool]
 	end
